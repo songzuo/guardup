@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071a33"/>
+      <stop offset="1" stop-color="#0d3b66"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- 网格纹理 -->
+  <g stroke="#22d3ee" stroke-opacity="0.06" stroke-width="1">
+    <path d="M0 210 H1200 M0 420 H1200 M300 0 V630 M600 0 V630 M900 0 V630"/>
+  </g>
+  <!-- Logo 图形（缩小版） -->
+  <g transform="translate(70,150) scale(0.62)">
+    <rect x="16" y="16" width="480" height="480" rx="104" fill="none" stroke="#22d3ee" stroke-opacity="0.3" stroke-width="3"/>
+    <path d="M256 96 L384 146 V262 C384 344 330 398 256 428 C182 398 128 344 128 262 V146 Z"
+          fill="none" stroke="url(#accent)" stroke-width="18" stroke-linejoin="round"/>
+    <circle cx="196" cy="252" r="20" fill="#22d3ee"/>
+    <circle cx="316" cy="252" r="20" fill="#e0f2fe"/>
+    <line x1="216" y1="252" x2="296" y2="252" stroke="#22d3ee" stroke-width="10" stroke-linecap="round" stroke-dasharray="1 22"/>
+    <path d="M268 196 L232 262 H262 L244 320 L292 244 H262 L280 196 Z" fill="#fbbf24"/>
+  </g>
+  <!-- 文案 -->
+  <text x="420" y="270" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="96" font-weight="700" fill="#f8fafc">GuardUp</text>
+  <rect x="424" y="300" width="120" height="6" fill="url(#accent)"/>
+  <text x="420" y="372" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="34" fill="#bae6fd">Automatic website failover.</text>
+  <text x="420" y="424" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="34" fill="#bae6fd">One command. Your DNS keys stay yours.</text>
+  <text x="420" y="500" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="24" fill="#7dd3fc">Cloudflare · Aliyun · DNSPod · Tencent Cloud</text>
+</svg>

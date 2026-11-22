@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a2342"/>
+      <stop offset="1" stop-color="#0d3b66"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <!-- 圆角底 -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="none" stroke="#22d3ee" stroke-opacity="0.25" stroke-width="3"/>
+  <!-- 盾牌 -->
+  <path d="M256 96 L384 146 V262 C384 344 330 398 256 428 C182 398 128 344 128 262 V146 Z"
+        fill="none" stroke="url(#accent)" stroke-width="18" stroke-linejoin="round"/>
+  <!-- 链路节点（主→备） -->
+  <circle cx="196" cy="252" r="20" fill="#22d3ee"/>
+  <circle cx="316" cy="252" r="20" fill="#e0f2fe"/>
+  <!-- 连接线 -->
+  <line x1="216" y1="252" x2="296" y2="252" stroke="#22d3ee" stroke-width="10" stroke-linecap="round" stroke-dasharray="1 22"/>
+  <!-- 闪电（自动切换） -->
+  <path d="M268 196 L232 262 H262 L244 320 L292 244 H262 L280 196 Z" fill="#fbbf24"/>
+</svg>

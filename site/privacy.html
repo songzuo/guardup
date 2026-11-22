@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy Policy — GuardUp</title><style>
+:root{--navy:#0a2342;--navy2:#0d3b66;--cyan:#22d3ee;--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--line:#e2e8f0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7}
+.wrap{max-width:820px;margin:0 auto;padding:0 24px}
+header{background:var(--navy);color:#fff;padding:18px 0}
+header .wrap{display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:700;font-size:20px}
+a{color:var(--cyan);text-decoration:none}
+main{background:#fff;border:1px solid var(--line);border-radius:14px;padding:44px;margin:40px auto;box-shadow:0 2px 12px rgba(15,23,42,.05)}
+h1{color:var(--navy);font-size:32px;margin-bottom:6px}
+.meta{color:var(--muted);font-size:14px;margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:18px}
+h2{color:var(--navy2);font-size:20px;margin:26px 0 10px}
+p,li{color:#334155;font-size:15px;margin-bottom:12px}
+ul{padding-left:22px}
+footer{background:var(--navy);color:#94a3b8;padding:30px 0;text-align:center;font-size:14px}
+footer a{color:#7dd3fc}
+</style></head>
+<body>
+<header><div class="wrap"><div class="brand">GuardUp</div><a href="/">← Back to home</a></div></header>
+<div class="wrap"><main><h1>Privacy Policy</h1><div class="meta">Last updated: 2026-11-22</div>
+<h2>1. Our core principle</h2>
+<p><strong>Your DNS credentials never leave your machine.</strong> The GuardUp agent runs on your own server, reads credentials from a local file (<code>~/.guardup/credentials.env</code>, mode 600), and communicates directly with your DNS provider. We do not receive, store, or transmit your DNS API tokens.</p>
+
+<h2>2. What the open-source agent collects</h2>
+<p>Nothing is sent to us by the agent. Health-check results and failover state are written to local files on your server. If you enable an optional alert channel (email or Telegram), notifications are sent directly from your server to the destination you configure.</p>
+
+<h2>3. What hosted services collect</h2>
+<p>If you use a paid hosted plan, we collect only what is necessary to operate it:</p>
+<ul>
+<li><strong>Account data:</strong> email address and account identifier from your payment provider.</li>
+<li><strong>Billing data:</strong> handled by our merchant-of-record payment processor. We do not store full card numbers or bank details.</li>
+<li><strong>Service telemetry:</strong> site health status and switch events you opt into sending, used to render your dashboard and reports.</li>
+</ul>
+
+<h2>4. Cookies and analytics</h2>
+<p>This site uses no advertising cookies and no third-party trackers. We may use privacy-friendly, aggregate analytics (page counts only, no cross-site profiling) to understand which pages are useful.</p>
+
+<h2>5. Data retention and deletion</h2>
+<p>Hosted account data is retained while your subscription is active and for a reasonable period afterward for billing records. You may request deletion of your account data at any time by contacting support@guard.7zi.com. Local agent data stays on your server under your control and is never retrieved by us.</p>
+
+<h2>6. Third parties</h2>
+<p>Payment processing is handled by our merchant of record (Creem / Dodo Payments). Their privacy policies govern the billing data they collect. We do not sell personal data to anyone.</p>
+
+<h2>7. Changes</h2>
+<p>We may update this policy. Changes will be posted here with a revised date.</p>
+
+<h2>8. Contact</h2>
+<p>Privacy questions: support@guard.7zi.com</p>
+</main></div>
+<footer><div class="wrap">© 2026 GuardUp · <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a> · <a href="/refund.html">Refund</a></div></footer>
+</body></html>

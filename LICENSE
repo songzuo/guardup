@@ -1,0 +1,41 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+Everyone is permitted to copy and distribute verbatim copies
+of this license document, but changing it is not allowed.
+
+SPDX-License-Identifier: AGPL-3.0-only
+
+GuardUp — 网站自动容灾 Agent
+Copyright (C) 2026 GuardUp contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+完整许可证正文（GNU AGPL v3 全文）：
+    https://www.gnu.org/licenses/agpl-3.0.txt
+    https://www.gnu.org/licenses/agpl-3.0.html
+
+---
+
+为什么选 AGPL-3.0（而非 MIT）：
+  AGPL 要求「通过网络提供服务」的修改版也必须开源，
+  这阻止云厂商拿走 Agent 代码直接做竞品托管服务。
+  同时我们保留商业双许可：需要闭源集成的客户可购买商业授权。
+  这套是 GitLab / Grafana 验证过的 Open Core 路线。
+
+Note: 正式发布时应把 GNU AGPL v3 完整正文（约 660 行）粘贴到本文件。
+      当前网络受限无法自动获取，SPDX 标识符已足以让 GitHub 正确识别许可。

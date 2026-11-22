@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuardUp — Automatic website failover, one command</title>
+<meta name="description" content="GuardUp watches your origin and automatically repoints DNS to a standby server when it goes down. Works with Cloudflare, Aliyun, DNSPod, Tencent Cloud. Your DNS keys stay on your machine.">
+<meta property="og:title" content="GuardUp — Automatic website failover">
+<meta property="og:description" content="One command. Your DNS keys stay yours. Works across 4 DNS providers.">
+<meta property="og:image" content="https://guard.7zi.com/og-image.svg">
+<meta property="og:type" content="website">
+<style>
+  :root{--navy:#0a2342;--navy2:#0d3b66;--cyan:#22d3ee;--cyan2:#0ea5e9;--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--line:#e2e8f0;--amber:#fbbf24}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  a{color:var(--cyan2);text-decoration:none}
+  header{background:var(--navy);color:#fff;padding:18px 0;border-bottom:1px solid rgba(34,211,238,.2)}
+  header .wrap{display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:20px;letter-spacing:.3px}
+  .brand img{width:34px;height:34px}
+  .btn{display:inline-block;background:var(--cyan);color:var(--navy);font-weight:700;padding:11px 22px;border-radius:8px}
+  .btn:hover{background:#67e8f9}
+  .btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+  .hero{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:80px 0 70px;position:relative;overflow:hidden}
+  .hero:after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;border:1px solid rgba(34,211,238,.15)}
+  .hero h1{font-size:52px;line-height:1.15;max-width:680px;margin-bottom:20px}
+  .hero h1 span{color:var(--cyan)}
+  .hero p{font-size:20px;color:#bae6fd;max-width:620px;margin-bottom:32px}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap}
+  .cmd{background:rgba(0,0,0,.35);border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:14px 20px;font-family:ui-monospace,Consolas,monospace;color:var(--cyan);display:inline-block;margin-top:28px;font-size:15px}
+  section{padding:72px 0}
+  section h2{font-size:34px;margin-bottom:12px;color:var(--navy)}
+  .sub{color:var(--muted);font-size:18px;margin-bottom:36px;max-width:700px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;box-shadow:0 2px 12px rgba(15,23,42,.04)}
+  .card h3{color:var(--navy2);margin-bottom:8px;font-size:19px}
+  .card p{color:var(--muted);font-size:15px}
+  .ico{width:40px;height:40px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,23,42,.05)}
+  th,td{padding:15px 18px;text-align:left;border-bottom:1px solid var(--line);font-size:15px}
+  th{background:var(--navy);color:#fff;font-weight:600}
+  tr:last-child td{border-bottom:none}
+  .price{background:#fff}
+  .price .grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .plan{border:2px solid var(--line);border-radius:14px;padding:28px;position:relative}
+  .plan.feat{border-color:var(--cyan)}
+  .plan .tag{position:absolute;top:-13px;right:18px;background:var(--cyan);color:var(--navy);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px}
+  .plan .amt{font-size:40px;font-weight:800;color:var(--navy);margin:10px 0}
+  .plan .amt small{font-size:16px;color:var(--muted);font-weight:400}
+  .plan ul{list-style:none;margin:18px 0}
+  .plan li{padding:6px 0 6px 24px;position:relative;color:var(--muted);font-size:14px}
+  .plan li:before{content:"✓";position:absolute;left:0;color:var(--cyan2);font-weight:700}
+  details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin-bottom:12px}
+  details summary{cursor:pointer;font-weight:600;color:var(--navy2)}
+  details p{color:var(--muted);margin-top:12px;font-size:15px}
+  footer{background:var(--navy);color:#94a3b8;padding:40px 0 30px;font-size:14px}
+  footer a{color:#7dd3fc}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .note{background:#fffbeb;border-left:4px solid var(--amber);padding:16px 20px;border-radius:8px;color:#92400e;font-size:14px;margin-top:24px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="brand"><img src="/logo.svg" alt="GuardUp"> GuardUp</div>
+  <a class="btn" href="https://github.com/songzuo/guardup">Get started — it's free</a>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <h1>Your site goes down. <span>DNS switches itself.</span></h1>
+  <p>GuardUp watches your origin server and automatically points your DNS to a standby when it fails — then switches back when you recover. One command to install. Your DNS keys never leave your machine.</p>
+  <div class="cta">
+    <a class="btn" href="https://github.com/songzuo/guardup">★ Star on GitHub</a>
+    <a class="btn ghost" href="#pricing">See pricing</a>
+  </div>
+  <div class="cmd">curl -fsSL https://guard.7zi.com/install.sh | sh</div>
+</div></div>
+
+<section><div class="wrap">
+  <h2>Set up in 3 questions, not 30 settings</h2>
+  <p class="sub">No dashboards to configure. No "A record", "TTL", or "nameserver" jargon. GuardUp detects your DNS provider automatically.</p>
+  <div class="grid">
+    <div class="card"><div class="ico">1️⃣</div><h3>Tell us your domain</h3><p>That's it for step one. We query the authoritative nameservers to figure out who hosts your DNS.</p></div>
+    <div class="card"><div class="ico">2️⃣</div><h3>Give us the standby IP</h3><p>The server that should take traffic when your main one dies. Current IP is pre-filled.</p></div>
+    <div class="card"><div class="ico">3️⃣</div><h3>Paste one DNS token</h3><p>Stored locally on your server (chmod 600). Never uploaded. Audit the open-source code yourself.</p></div>
+  </div>
+  <div class="note"><strong>Honest RTO:</strong> 1–10 minutes depending on your DNS plan's TTL. Free tiers of Aliyun / DNSPod enforce a 600s floor. We don't sell "instant" — we sell certainty when it matters.</div>
+</div></section>
+
+<section id="why"><div class="wrap">
+  <h2>Built for when it actually matters</h2>
+  <p class="sub">The hard part of failover isn't changing a DNS record — it's knowing when to change it without flapping, and not losing control when the vendor goes away.</p>
+  <table>
+    <tr><th></th><th>GuardUp</th><th>Typical DNS failover SaaS</th></tr>
+    <tr><td>DNS write credentials</td><td>Stay on your server</td><td>Uploaded to their cloud</td></tr>
+    <tr><td>DNS providers</td><td>Cloudflare · Aliyun · DNSPod · Tencent</td><td>Usually one</td></tr>
+    <tr><td>Works if the vendor disappears</td><td>Yes — logic runs locally</td><td>No</td></tr>
+    <tr><td>Anti-flapping</td><td>Direct-IP checks + cooldown + drift repair</td><td>Varies</td></tr>
+    <tr><td>Lock-in</td><td>None — open source, AGPL</td><td>Platform dependency</td></tr>
+  </table>
+</div></section>
+
+<section class="price" id="pricing"><div class="wrap">
+  <h2>Simple pricing</h2>
+  <p class="sub">Pay per protected site. No query-volume billing — we don't run authoritative DNS, so there's no per-query cost to pass on.</p>
+  <div class="grid">
+    <div class="plan">
+      <h3>Free</h3><div class="amt">$0<small> / forever</small></div>
+      <ul><li>1 site</li><li>Health monitoring + alerts</li><li>Open-source agent</li><li>Manual failover</li></ul>
+      <a class="btn ghost" href="https://github.com/songzuo/guardup">Self-host free</a>
+    </div>
+    <div class="plan feat"><div class="tag">MOST POPULAR</div>
+      <h3>Pro</h3><div class="amt">$9<small> / site / month</small></div>
+      <ul><li>Automatic failover</li><li>3-region confirmation</li><li>Standby content sync</li><li>Switch reports</li><li>Email + Telegram alerts</li></ul>
+      <a class="btn" href="#cta">Get Pro</a>
+    </div>
+    <div class="plan">
+      <h3>Team</h3><div class="amt">$29<small> / month · 5 sites</small></div>
+      <ul><li>Everything in Pro</li><li>Shared dashboard</li><li>Priority support</li><li>Whitelabel reports</li></ul>
+      <a class="btn ghost" href="#cta">Get Team</a>
+    </div>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <h2>Questions</h2>
+  <details><summary>Do I have to trust you with my DNS API keys?</summary><p>No. The agent runs on your own standby server and talks to your DNS provider directly. Credentials are stored locally and never sent to us. The agent is open source (AGPL-3.0) — you can read every line.</p></details>
+  <details><summary>What if GuardUp's servers go down?</summary><p>Your protection keeps working. The failover logic and state machine run entirely in the agent on your server. A hosted control plane, if you use it, only handles configuration, alerts, and reports — it is not in the critical path.</p></details>
+  <details><summary>How fast is failover?</summary><p>Typically 1–10 minutes, dominated by your DNS record's TTL. We check every 60s by default, require 2 consecutive failures, then change DNS. Free tiers of some providers enforce a 600s TTL minimum.</p></details>
+  <details><summary>Which DNS providers are supported?</summary><p>Cloudflare, Aliyun DNS, DNSPod (v1), and Tencent Cloud DNS. The wizard auto-detects which one you use.</p></details>
+  <details><summary>Why open source if it's a paid product?</summary><p>Because handing a tool automatic control of your DNS requires trust, and open source is how you earn it. The hosted control plane, multi-region confirmation, and alerting are the paid part — the agent itself is free and auditable. This is the same open-core model GitLab and Grafana use.</p></details>
+</div></section>
+
+<section id="cta"><div class="wrap" style="text-align:center">
+  <h2>Never lose a visitor to downtime again</h2>
+  <p class="sub" style="margin:12px auto 24px">Install in one command. Your first dry-run takes seconds.</p>
+  <a class="btn" href="https://github.com/songzuo/guardup">Start with GuardUp — free</a>
+</div></section>
+
+<footer><div class="wrap">
+  <div><strong style="color:#f8fafc">GuardUp</strong><br>Automatic website failover.</div>
+  <div>
+    <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a> · <a href="/refund.html">Refund</a><br>
+    <a href="https://github.com/songzuo/guardup">GitHub</a> · <a href="/install.sh">Install script</a>
+  </div>
+  <div>© 2026 GuardUp. Built for people who'd rather not get paged at 3am.</div>
+</div></footer>
+
+</body>
+</html>
