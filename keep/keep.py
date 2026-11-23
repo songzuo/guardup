@@ -17,6 +17,7 @@ import argparse
 import glob
 import json
 import os
+import shutil
 import sqlite3
 import sys
 
@@ -30,8 +31,9 @@ import watch as W  # noqa: E402
 import db as DB  # noqa: E402
 import quorum as Q  # noqa: E402
 import checkout as C  # noqa: E402
+import bidir as B  # noqa: E402
 
-VERSION = "0.3.0-p4"
+VERSION = "0.4.0-bidir"
 
 
 def cmd_init(args):
@@ -212,8 +214,71 @@ def cmd_checkout(args):
     return 0
 
 
+def cmd_bidir(args):
+    """主备双向同步：副站故障期增量反向合并回恢复的主站（failback）。"""
+    if args.bidir_action == "track":
+        B.install_tracking(args.db, args.table, pk_col=args.pk, origin=args.origin)
+        print(f"✓ 已在 {args.db} 的 {args.table} 安装变更追踪（业务表零改动）")
+        return 0
+
+    if args.bidir_action == "snapshot":
+        # 故障切换前拍 base 快照——没有它就无法安全回切
+        if not os.path.exists(args.db):
+            print(f"✗ 库不存在: {args.db}")
+            return 1
+        B.snapshot_base(args.db, args.out)
+        print(f"✓ 已拍分叉点快照(base): {args.out}")
+        print("  重要：这个文件要在故障切换那一刻保存好，回切合并时要用它做三方比较。")
+        return 0
+
+    if args.bidir_action == "export":
+        cs = B.export_changeset(args.db, args.table, since_ts=args.since)
+        n = len(cs["changes"])
+        import json
+        with open(args.out, "w", encoding="utf-8") as fh:
+            json.dump(cs, fh, ensure_ascii=False)
+        print(f"✓ 从副站导出 {n} 条变更 → {args.out}")
+        return 0
+
+    if args.bidir_action == "merge":
+        # 三方合并：base(分叉点) + local(当前主站) + 副站变更集
+        if not args.base or not os.path.exists(args.base):
+            print("✗ 缺少 base 分叉点快照——没有它无法区分'谁的变更'，拒绝合并（防数据丢失）")
+            print("  故障切换前请跑: keep.py bidir snapshot --db <主库> --out <base.db>")
+            return 1
+        import json
+        with open(args.changeset, "r", encoding="utf-8") as fh:
+            cs = json.load(fh)
+        table = cs["table"]
+        base_rows = B.read_rows(args.base, table, pk_col=args.pk)
+        local_rows = B.read_rows(args.local, table, pk_col=args.pk)
+        # 关键：从 base + 变更集重建副站**完整行集**，不能只传变更行，
+        # 否则未变更的行会因 row 缺失被误判成"副站删除了它"。
+        remote_changes = {pk: {"ts": m["ts"], "op": m["op"]}
+                          for pk, m in cs["changes"].items()}
+        remote_rows = B.reconstruct_rows(base_rows, cs["changes"])
+        res = B.merge(base_rows, local_rows, remote_rows,
+                      remote_changes=remote_changes, strategy=args.strategy)
+        print(f"合并分析：{res.summary()}")
+        for c in res.conflicts:
+            print(f"  ⚠ 冲突 pk={c.pk}: {c.reason}")
+        if args.strategy == "manual" and res.conflicts:
+            print("✗ manual 策略下有冲突，已阻断——请人工裁决后重试")
+            return 2
+        if args.dry_run:
+            print("  [dry-run] 未写入任何库")
+            return 0
+        # 结果写到独立库，再由 gate 校验/换库/回滚（不在原主库上直接改）
+        shutil.copy2(args.local, args.out)
+        n = B.apply_merge(args.out, table, res, pk_col=args.pk)
+        print(f"✓ 已生成合并结果库 {args.out}（应用 {n} 行）")
+        print(f"  下一步核对后换回主站：把它作为新库走 gate 的校验+健康检查+回滚")
+        return 0
+    return 1
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="keep.py", description="GuardUp Keep 全栈热备编排（P4）")
+    ap = argparse.ArgumentParser(prog="keep.py", description="GuardUp Keep 全栈热备编排（含双向同步）")
     ap.add_argument("--version", action="version", version=f"GuardUp Keep {VERSION}")
     sub = ap.add_subparsers(dest="cmd")
 
@@ -259,6 +324,23 @@ def main(argv=None):
     p_co.add_argument("--plan", choices=list(C.PLANS), default=None, help="显示该档结算链接")
     p_co.add_argument("--email", default=None, help="预填邮箱（不存储）")
     p_co.set_defaults(fn=cmd_checkout)
+
+    p_bi = sub.add_parser("bidir", help="主备双向同步 / 灾备回切增量合并")
+    p_bi.add_argument("bidir_action", choices=["track", "snapshot", "export", "merge"])
+    p_bi.add_argument("--db", default="", help="track/export: 目标库路径")
+    p_bi.add_argument("--table", default="", help="track/export: 业务表名")
+    p_bi.add_argument("--pk", default="id", help="主键列名（默认 id）")
+    p_bi.add_argument("--origin", default="standby", help="track: 站点标识")
+    p_bi.add_argument("--out", default="", help="snapshot/export/merge: 输出文件")
+    p_bi.add_argument("--since", type=float, default=0.0, help="export: 只导 ts>此值")
+    p_bi.add_argument("--base", default="", help="merge: 分叉点快照(必填)")
+    p_bi.add_argument("--local", default="", help="merge: 当前主站库(必填)")
+    p_bi.add_argument("--changeset", default="", help="merge: 副站导出的变更集 json")
+    p_bi.add_argument("--strategy", default="remote_wins",
+                      choices=["remote_wins", "local_wins", "manual"],
+                      help="merge: 冲突策略（默认副站优先）")
+    p_bi.add_argument("--dry-run", action="store_true", help="merge: 只分析不写库")
+    p_bi.set_defaults(fn=cmd_bidir)
 
     args = ap.parse_args(argv)
     if not hasattr(args, "fn"):

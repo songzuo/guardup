@@ -42,7 +42,18 @@ modules.
 | `db.py` | PG/MySQL real replica: consistent dump → verify → **replication-lag gate** → PITR catalog → apply/rollback | `--allow-stale` gate |
 | `quorum.py` | De-single-point: multi-region vote (quorum/anti-flap/drift-repair) + dual control-plane lease with fencing | new |
 | `checkout.py` | Payment adapter: Creem primary / Dodo fallback, single source of pricing truth, no money/keys touched | new |
-| `keep.py` | Orchestration CLI (`init` / `plan` / `sync` / `watch` / `db` / `quorum` / `checkout`) | new |
+| `bidir.py` | **Bidirectional sync / failback**: change tracking (shadow table + triggers), 3-way merge (base+local+remote), conflict policy, tombstone deletes, cross-host changeset bridge | new |
+| `keep.py` | Orchestration CLI (`init` / `plan` / `sync` / `watch` / `db` / `quorum` / `checkout` / `bidir`) | new |
+
+### Bidirectional sync (failback) — why it matters
+
+One-way sync handles *failing over*, but not *failing back*. When the primary
+goes down and the standby takes traffic, the standby produces **real new data**
+(orders, signups, config). When the primary comes back with stale data, copying
+it over the standby would silently lose everything written during the outage.
+`bidir.py` reverse-merges the standby's incremental changes back into the
+recovered primary using a three-way merge against a failover-time `base`
+snapshot. See `BIDIRECTIONAL.md`.
 
 ## Quick start (prototype)
 
@@ -57,6 +68,11 @@ python keep.py db gate --lag 5      # replication-lag gate (auto-allow if within
 python keep.py db pitr --dir ./pitr # list point-in-time snapshots
 python keep.py quorum               # demo: multi-region vote + lease fencing
 python keep.py checkout --plan guard # 3-tier pricing + dual checkout links
+# bidirectional failback (see BIDIRECTIONAL.md)
+python keep.py bidir snapshot --db app.db --out base.db   # failover-time base
+python keep.py bidir track --db standby.db --table orders          # one-time
+python keep.py bidir export --db standby.db --table orders --out ch.json
+python keep.py bidir merge --base base.db --local app.db --changeset ch.json --dry-run
 ```
 
 `healthcheck` is injected by the orchestration layer (real deployment wires in
@@ -71,11 +87,12 @@ python tests/test_app.py        # 7  dynamic-app takeover
 python tests/test_db.py         # 7  PG/MySQL replica + lag gate + PITR
 python tests/test_quorum.py     # 7  multi-region vote + lease fencing
 python tests/test_checkout.py   # 6  payment adapter
+python tests/test_bidir.py      # 9  bidirectional failback (real triggers)
 # plus ../tests/test_guardup.py # 6  open-source DNS engine
 ```
 
 Real SQLite in WAL mode, real backup API, deliberately corrupted DB, forced
-healthcheck failure — no mocked core logic. **42/42 passing** across 6 suites.
+healthcheck failure — no mocked core logic. **51/51 passing** across 7 suites.
 
 ## Boundaries (deliberate)
 
