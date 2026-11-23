@@ -11,6 +11,8 @@ GuardUp watches your origin server and, when it goes down, automatically repoint
 
 > **Your DNS credentials never leave your machine.** The agent runs on your own standby server and talks to your DNS provider directly. There is no control plane to trust with write access to your DNS.
 
+> **Need more than DNS?** [`keep/`](keep/README.md) is the commercial full-stack line — file + database + application takeover with consistent snapshots and auto-rollback (P2 prototype). This free agent stays DNS-only by design.
+
 ---
 
 ## Why GuardUp
