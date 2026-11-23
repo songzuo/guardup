@@ -4,14 +4,16 @@
 > stays a DNS failover tool; **Keep** is the paid full-stack line: file + database
 > + application takeover + DNS, driven by declarative profiles and zero guessing.
 
-**Status: P4 + self-system upgrade.** Core logic is real and tested
-(60/60 across 8 suites). The three gaps from the v2 plan are covered:
+**Status: P4 + self-system upgrade (P0 + P1 done).** Core logic is real and tested
+(69/69 across 9 suites). The three gaps from the v2 plan are covered:
 dynamic-app takeover (`app.py`), real DB replica (`db.py`), and de-singled
 control plane with multi-region voting (`quorum.py`). Plus a payment adapter
-(`checkout.py`). `bidir.py` adds failback (two-way sync), and `db_live_sync.py`
-flows the DB-replica capability back into our own battle-tested failover system
-whose `SYNC_DB` was never enabled. See `FULL-STACK-PLAN-v2.md` and
-`../SELF-SYSTEM-ASSESSMENT.md`.
+(`checkout.py`). `bidir.py` adds failback (two-way sync). Two modules flow product
+capability back into our own battle-tested failover system: `db_live_sync.py`
+(P0 — DB replica, our `SYNC_DB` was never enabled) and `quorum_live.py`
+(P1 — the missing transport layer for multi-region voting: shared SQLite lease +
+probe aggregation + fencing gate). See `FULL-STACK-PLAN-v2.md`,
+`../SELF-SYSTEM-ASSESSMENT.md`, `QUORUM-LIVE.md`.
 
 ## Why this exists
 
@@ -40,8 +42,8 @@ modules.
 | `discover.py` | Auto-discover nginx docroots + SQLite DB paths; server-level roots only, ACME excluded | `discover_roots.py` |
 | `gate.py` | Consistent snapshot → verify → logical-change check → swap → healthcheck → auto-rollback | `sync_apigw.sh` |
 | `watch.py` | Golden-snapshot content guard against degradation | `guard_mainlander.sh` |
-| `bidir.py` | Failback: 3-way merge + change tracking + cross-host bridge | new |
-| `db_live_sync.py` | **Upgrade for our own system**: consistent DB snapshot + verify + PITR + restore drill; dry-run by default | flows `db.py` back to `sync.sh` |
+| `db_live_sync.py` | **Self-system P0 upgrade**: consistent DB snapshot + verify + PITR + restore drill; dry-run by default | flows `db.py` back to `sync.sh` |
+| `quorum_live.py` | **Self-system P1 upgrade**: shared SQLite lease (CAS fencing) + multi-bot probe aggregation + go/no-go gate; state persists across timer rounds | fills `quorum.py`'s missing transport layer |
 | `app.py` | Next.js/dynamic-site takeover: artifact sync → versioned swap → real HTTP healthcheck → same-port rollback | new |
 | `db.py` | PG/MySQL real replica: consistent dump → verify → **replication-lag gate** → PITR catalog → apply/rollback | `--allow-stale` gate |
 | `quorum.py` | De-single-point: multi-region vote (quorum/anti-flap/drift-repair) + dual control-plane lease with fencing | new |
@@ -92,13 +94,15 @@ python tests/test_db.py         # 7  PG/MySQL replica + lag gate + PITR
 python tests/test_quorum.py     # 7  multi-region vote + lease fencing
 python tests/test_checkout.py   # 6  payment adapter
 python tests/test_bidir.py      # 9  bidirectional failback (real triggers)
-python tests/test_db_live_sync.py # 9 self-system DB upgrade (backup API + drill)
+python tests/test_db_live_sync.py # 9 self-system P0 DB upgrade (backup API + drill)
+python tests/test_quorum_live.py # 9 self-system P1 vote transport (shared lease + gate)
 # plus ../tests/test_guardup.py # 6  open-source DNS engine
 ```
 
 Real SQLite in WAL mode, real backup API (incl. under concurrent writes),
-deliberately corrupted DB, forced healthcheck failure, real restore drill —
-no mocked core logic. **60/60 passing** across 8 suites.
+deliberately corrupted DB, forced healthcheck failure, real restore drill,
+cross-round vote state persistence, cross-process fencing CAS —
+no mocked core logic. **69/69 passing** across 9 suites.
 
 ## Boundaries (deliberate)
 

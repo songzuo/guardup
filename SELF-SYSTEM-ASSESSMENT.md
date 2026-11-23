@@ -70,8 +70,10 @@ GuardUp Keep 是"架构完备但缺实战打磨的产品原型"。自建系统�
    **应该反向回流进产品**，而不是在升级里丢掉。
 2. **P0 立即补**——把产品 `db.py` 的一致性转储/校验/PITR 能力移植成自建系统能用的形态。
    本轮已完成，见 `keep/db_live_sync.py`（下面详述）。
-3. **P1 下一步**——`quorum.py` 需要多地探测点才有意义，涉及在其它 bot 上部署探针，
-   属于跨机变更，放在 P0 稳定运行后再做。
+3. **P1 已备好能力层**——`quorum.py` 只写了纯逻辑，缺传输层（探测上报/租约存储）。
+   本轮新增 `keep/quorum_live.py` 补齐：SQLite 共享租约（fencing CAS）+ 多地探测
+   上报汇总 + 投票状态跨轮次持久化 + go/no-go 闸门。隔离验证 9/9 通过。
+   **真正启用仍需跨机部署探针 + 共享库，属生产变更，未执行**（见 `QUORUM-LIVE.md`）。
 4. **P2 按需**——若确认有"备站也写数据"的业务，再接 `bidir.py` 与 `app.py`。
 
 ## 本轮已落地：P0 数据库真同步补强
@@ -85,3 +87,25 @@ GuardUp Keep 是"架构完备但缺实战打磨的产品原型"。自建系统�
 - 默认 `--dry-run`，真实落盘要显式 `--apply`；全程不碰生产 `/data/standby/db/`。
 
 测试：`keep/tests/test_db_live_sync.py`，真 SQLite 端到端，9 项全绿。
+
+## 本轮已落地：P1 多地投票传输层补强
+
+新增 `keep/quorum_live.py` —— 把 `quorum.py` 缺失的传输层补齐（它此前只有纯逻辑 +
+测试用 `MemoryStore`，没有真实的探测上报和租约存储）：
+
+- **SQLite 共享租约** `SQLiteLeaseStore`：实现 `get`/`set_if` 的原子 CAS
+  （`BEGIN IMMEDIATE` + `UPDATE ... WHERE epoch=?`），多机争主时 fencing epoch 单调递增；
+- **多地探测上报汇总** `ProbeStore`：各 bot 写 `probe_reports` 表，投票前读窗口内上报，
+  喂给 `quorum.vote()`；
+- **跨轮次状态持久化**：`vote_state` 表存 `bad_rounds`/`last_switch_ts` —— 这是
+  "连续 N 轮确认"和"冷却"在 systemd timer 每轮独立调用时真正生效的关键
+  （不持久化则每轮都从第 0 轮开始，永远切不了）；
+- **fencing 闸门**：投票判死还不够，`can_operate()` 确认 actor 是当前 leader 且租约未过期
+  才放行 —— 杜绝旧主脑裂双写。
+
+安全底线：默认 dry-run，写操作显式 `--apply`；本模块只输出 go/no-go 信号，
+不直接改 DNS（仍走现有 `engine.py`）；全程隔离临时目录，未碰生产与任何 bot。
+
+测试：`keep/tests/test_quorum_live.py`，真 SQLite + 虚拟时钟，9 项全绿；
+CLI 端到端演练覆盖单点误判挡住、无 leader 拒切、leader 放行、非主 fencing 拒绝、
+两轮 `--apply` 完成确认累加。接线方式与边界见 `keep/QUORUM-LIVE.md`。
