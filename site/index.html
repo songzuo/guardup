@@ -58,13 +58,27 @@
   footer a{color:#7dd3fc}
   footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
   .note{background:#fffbeb;border-left:4px solid var(--amber);padding:16px 20px;border-radius:8px;color:#92400e;font-size:14px;margin-top:24px}
+  .keep{background:linear-gradient(160deg,#071a30,#0d3b66);color:#fff;padding:78px 0}
+  .keep h2{color:#fff}
+  .keep .sub{color:#bae6fd}
+  .keep .plan{background:rgba(255,255,255,.05);border-color:rgba(34,211,238,.35)}
+  .keep .plan h3,.keep .plan .amt{color:#fff}
+  .keep .plan .amt small{color:#94a3b8}
+  .keep .plan li{color:#cbd5e1}
+  .keep .plan.feat{border-color:var(--cyan);background:rgba(34,211,238,.08)}
+  .keep .ribbon{display:inline-block;background:var(--cyan);color:var(--navy);font-weight:700;font-size:12px;padding:5px 14px;border-radius:20px;margin-bottom:14px}
+  .keep .fine{color:#94a3b8;font-size:13px;margin-top:22px}
 </style>
 </head>
 <body>
 
 <header><div class="wrap">
   <div class="brand"><img src="/logo.svg" alt="GuardUp"> GuardUp</div>
-  <a class="btn" href="https://github.com/songzuo/guardup">Get started — it's free</a>
+  <nav style="display:flex;align-items:center;gap:20px">
+    <a href="#pricing" style="color:#bae6fd">DNS failover</a>
+    <a href="#keep" style="color:#bae6fd">Full-stack Keep</a>
+    <a class="btn" href="https://github.com/songzuo/guardup">Get started — it's free</a>
+  </nav>
 </div></header>
 
 <div class="hero"><div class="wrap">
@@ -121,6 +135,30 @@
       <a class="btn ghost" href="#cta">Get Team</a>
     </div>
   </div>
+</div></section>
+
+<section class="keep" id="keep"><div class="wrap">
+  <span class="ribbon">NEW · GuardUp Keep</span>
+  <h2>When DNS isn't enough — full-stack hot standby</h2>
+  <p class="sub">Keep mirrors your files, databases and running app to a standby server, then takes over automatically — not just your DNS. One declarative profile, zero guessing. The same battle-tested engine that powers the free agent.</p>
+  <div class="grid">
+    <div class="plan">
+      <h3>Seed</h3><div class="amt">$19<small> / site / month</small></div>
+      <ul><li>DNS auto-failover</li><li>Static files (every 30 min)</li><li>5GB storage included</li><li>Quarterly drill report</li></ul>
+      <a class="btn ghost" href="mailto:hello@guard.7zi.com?subject=GuardUp%20Seed">Get Seed</a>
+    </div>
+    <div class="plan feat"><div class="tag">MOST POPULAR</div>
+      <h3>Guard</h3><div class="amt">$79<small> / site / month</small></div>
+      <ul><li>Everything in Seed</li><li>Files every 5 min</li><li>SQLite/MySQL consistent snapshots</li><li>Stateless app auto-takeover</li><li>Multi-region confirmation</li><li>50GB storage · monthly drills</li></ul>
+      <a class="btn" href="mailto:hello@guard.7zi.com?subject=GuardUp%20Guard">Get Guard</a>
+    </div>
+    <div class="plan">
+      <h3>Fortress</h3><div class="amt">$199<small> / site / month</small></div>
+      <ul><li>Real-time file sync</li><li>PG/MySQL real-time + PITR 7 days</li><li>Stateful app takeover</li><li>Multi-region confirmation</li><li>200GB storage · SLA credit</li></ul>
+      <a class="btn ghost" href="mailto:hello@guard.7zi.com?subject=GuardUp%20Fortress">Get Fortress</a>
+    </div>
+  </div>
+  <p class="fine">A one-time $99 onboarding fee covers environment audit, first full sync and a live failover drill — credited against your first month. RTO is the only pricing dimension. Storage and recovery compute are listed transparently. Need a server-level / K8s DR? That's outside our scope — we do website-level standby.</p>
 </div></section>
 
 <section id="faq"><div class="wrap">

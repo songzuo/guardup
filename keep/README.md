@@ -4,9 +4,12 @@
 > stays a DNS failover tool; **Keep** is the paid full-stack line: file + database
 > + application takeover + DNS, driven by declarative profiles and zero guessing.
 
-**Status: P2 prototype.** Core logic is real and tested (9/9 with a real SQLite
-WAL database), but the transport layer (sync across two hosts) and the hosted
-control plane are not built yet. See `FULL-STACK-PLAN-v2.md` for the roadmap.
+**Status: P4 — all three automation gaps closed.** Core logic is real and
+tested (42/42 across 6 suites). The three gaps from the v2 plan are now covered:
+dynamic-app takeover (`app.py`), real DB replica (`db.py`), and de-singled
+control plane with multi-region voting (`quorum.py`). Plus a payment adapter
+(`checkout.py`). The cross-host transport layer is still the one piece wired at
+deploy time. See `FULL-STACK-PLAN-v2.md` for the roadmap.
 
 ## Why this exists
 
@@ -35,7 +38,11 @@ modules.
 | `discover.py` | Auto-discover nginx docroots + SQLite DB paths; server-level roots only, ACME excluded | `discover_roots.py` |
 | `gate.py` | Consistent snapshot → verify → logical-change check → swap → healthcheck → auto-rollback | `sync_apigw.sh` |
 | `watch.py` | Golden-snapshot content guard against degradation | `guard_mainlander.sh` |
-| `keep.py` | Orchestration CLI (`init` / `plan` / `sync` / `watch`) | new |
+| `app.py` | Next.js/dynamic-site takeover: artifact sync → versioned swap → real HTTP healthcheck → same-port rollback | new |
+| `db.py` | PG/MySQL real replica: consistent dump → verify → **replication-lag gate** → PITR catalog → apply/rollback | `--allow-stale` gate |
+| `quorum.py` | De-single-point: multi-region vote (quorum/anti-flap/drift-repair) + dual control-plane lease with fencing | new |
+| `checkout.py` | Payment adapter: Creem primary / Dodo fallback, single source of pricing truth, no money/keys touched | new |
+| `keep.py` | Orchestration CLI (`init` / `plan` / `sync` / `watch` / `db` / `quorum` / `checkout`) | new |
 
 ## Quick start (prototype)
 
@@ -46,6 +53,10 @@ python keep.py sync --dry-run       # snapshot + verify, show what WOULD change
 python keep.py sync                 # really swap + healthcheck (auto-rollback on fail)
 python keep.py watch --save         # record golden snapshots
 python keep.py watch                # check for degradation
+python keep.py db gate --lag 5      # replication-lag gate (auto-allow if within SLA)
+python keep.py db pitr --dir ./pitr # list point-in-time snapshots
+python keep.py quorum               # demo: multi-region vote + lease fencing
+python keep.py checkout --plan guard # 3-tier pricing + dual checkout links
 ```
 
 `healthcheck` is injected by the orchestration layer (real deployment wires in
@@ -55,11 +66,16 @@ python keep.py watch                # check for degradation
 ## Test
 
 ```bash
-python tests/test_keep.py
+python tests/test_keep.py       # 9  core gate/discover/watch/profile
+python tests/test_app.py        # 7  dynamic-app takeover
+python tests/test_db.py         # 7  PG/MySQL replica + lag gate + PITR
+python tests/test_quorum.py     # 7  multi-region vote + lease fencing
+python tests/test_checkout.py   # 6  payment adapter
+# plus ../tests/test_guardup.py # 6  open-source DNS engine
 ```
 
 Real SQLite in WAL mode, real backup API, deliberately corrupted DB, forced
-healthcheck failure — no mocked core logic. 9/9 passing.
+healthcheck failure — no mocked core logic. **42/42 passing** across 6 suites.
 
 ## Boundaries (deliberate)
 

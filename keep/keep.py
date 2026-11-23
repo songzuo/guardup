@@ -27,8 +27,11 @@ from profile import load_profiles, save_example, ServiceProfile  # noqa: E402
 import discover as D  # noqa: E402
 import gate as G  # noqa: E402
 import watch as W  # noqa: E402
+import db as DB  # noqa: E402
+import quorum as Q  # noqa: E402
+import checkout as C  # noqa: E402
 
-VERSION = "0.2.0-p2"
+VERSION = "0.3.0-p4"
 
 
 def cmd_init(args):
@@ -142,8 +145,75 @@ def cmd_watch(args):
     return rc
 
 
+def cmd_db(args):
+    """PG/MySQL 真副本：延迟闸门 + PITR 目录管理（不碰真实 DB，命令注入）。"""
+    if args.db_action == "gate":
+        r = DB.lag_gate(args.lag, args.max_lag, force=args.force)
+        print(f"{'✓ 放行' if r.allowed else '✗ 暂缓'}: {r.reason}")
+        return 0 if r.allowed else 2
+    if args.db_action == "pitr":
+        snaps = DB.list_pitr(args.dir)
+        if args.prune is not None:
+            n = DB.prune_pitr(args.dir, keep=args.prune)
+            print(f"已清理 {n} 份旧快照，保留最近 {args.prune} 份")
+        elif args.point is not None:
+            s = DB.pick_for_point(args.dir, args.point)
+            print(f"恢复点 <= {args.point}: {s.path if s else '（无匹配快照）'}")
+        else:
+            if not snaps:
+                print("（PITR 目录为空）")
+            for s in snaps:
+                print(f"  {s.created_at:.0f}  {s.kind:8}  {s.size}B  {s.path}")
+        return 0
+    return 1
+
+
+def cmd_quorum(args):
+    """多地投票演示：6 探测点 + 连续确认 + 冷却，纯逻辑无需真 bot。"""
+    ps = [
+        Q.Probe("bot-sz", "cn-east", False, ts=100),
+        Q.Probe("bot-bj", "cn-north", False, ts=100),
+        Q.Probe("bot-hk", "ap-hk", False, ts=100),
+        Q.Probe("bot-sg", "ap-sg", False, ts=100),
+        Q.Probe("bot-us", "us-west", True, ts=100),
+        Q.Probe("bot-de", "eu-central", True, ts=100),
+    ]
+    st = Q.VoteState()
+    print("模拟：4/6 探测点判死（跨 4 地域），主站疑似故障\n")
+    for t in (100, 101):
+        r = Q.vote(ps, st, now=t)
+        print(f"  第 {t-99} 轮: {r.decision:11} — {r.reason}")
+    # 租约 fencing 演示
+    store = Q.MemoryStore()
+    lease = Q.Lease(store, ttl=30, now_fn=lambda: 0.0)
+    a = lease.acquire("node-a")
+    b = lease.acquire("node-b")
+    print(f"\n控制面租约: node-a 争主={'成功' if a['ok'] else '失败'}(epoch={a['epoch']}), "
+          f"node-b 争主={'成功' if b['ok'] else '失败'}(fencing 防脑裂)")
+    return 0
+
+
+def cmd_checkout(args):
+    """收款适配层：打印三档报价 + 主备双通道结算链接（不建单、不碰钱）。"""
+    print("GuardUp Keep 定价（USD，RTO 是唯一价格阶梯）：\n")
+    for p in C.list_plans():
+        q = C.quote(p["key"], with_onboarding=(p["key"] == "guard"))
+        print(f"  {p['name']:9} ${p['price_monthly']:>3}/月  — {p['tagline']}")
+        if q["onboarding_usd"]:
+            print(f"            含 ${q['onboarding_usd']} 一次性接入费（抵首月）")
+    if args.plan:
+        d = C.dual_checkout(args.plan, email=args.email)
+        print(f"\n{args.plan} 双通道结算链接（Creem 主 / Dodo 备，一键切换防封）：")
+        print(f"  主: {d['primary']['url']}")
+        print(f"  备: {d['fallback']['url']}")
+        if "PLACEHOLDER" in d["primary"]["url"]:
+            print("  提示: 未配置 product id，设环境变量 GUARDUP_CREEM_PRODUCT_<PLAN> / "
+                  "GUARDUP_DODO_PRODUCT_<PLAN> 后生成真实链接。")
+    return 0
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="keep.py", description="GuardUp Keep 全栈热备编排（P2 原型）")
+    ap = argparse.ArgumentParser(prog="keep.py", description="GuardUp Keep 全栈热备编排（P4）")
     ap.add_argument("--version", action="version", version=f"GuardUp Keep {VERSION}")
     sub = ap.add_subparsers(dest="cmd")
 
@@ -171,6 +241,24 @@ def main(argv=None):
     p_watch.add_argument("--workdir", default="./.guardup")
     p_watch.add_argument("--save", action="store_true", help="保存 golden 快照")
     p_watch.set_defaults(fn=cmd_watch)
+
+    p_db = sub.add_parser("db", help="PG/MySQL 真副本：延迟闸门 + PITR 管理")
+    p_db.add_argument("db_action", choices=["gate", "pitr"])
+    p_db.add_argument("--lag", type=float, default=5.0, help="gate: 当前复制延迟秒数")
+    p_db.add_argument("--max-lag", type=float, default=30.0, help="gate: 允许的最大延迟")
+    p_db.add_argument("--force", action="store_true", help="gate: 演练强制放行")
+    p_db.add_argument("--dir", default="./.guardup/pitr", help="pitr: 快照目录")
+    p_db.add_argument("--prune", type=int, default=None, help="pitr: 保留最近 N 份")
+    p_db.add_argument("--point", type=float, default=None, help="pitr: 查 <= 时间点的恢复快照")
+    p_db.set_defaults(fn=cmd_db)
+
+    p_q = sub.add_parser("quorum", help="多地投票 + 租约 fencing 演示")
+    p_q.set_defaults(fn=cmd_quorum)
+
+    p_co = sub.add_parser("checkout", help="三档报价 + 主备双通道结算链接")
+    p_co.add_argument("--plan", choices=list(C.PLANS), default=None, help="显示该档结算链接")
+    p_co.add_argument("--email", default=None, help="预填邮箱（不存储）")
+    p_co.set_defaults(fn=cmd_checkout)
 
     args = ap.parse_args(argv)
     if not hasattr(args, "fn"):

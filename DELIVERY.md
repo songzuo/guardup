@@ -116,4 +116,33 @@
 
 ---
 
-*P1 完成于 2026-11-22，P2 原型与 P3 dogfooding 完成于 2026-11-23。代码、测试、站点、政策页、GitHub 推送、DNS 部署、Keep 原型、动态站接管全部落地并验证。*
+---
+
+## 九、P4：三缺口全部补齐 + 商业化落地（2026-11-23，一次性完成）
+
+用户要求"不分阶段、一次性完成全部任务"。v2 方案三个自动化缺口至此全部闭合，商业化前置就位。
+
+### 缺口 2 —— 数据库真副本 `keep/db.py`（7 测试）
+- 一致性逻辑转储：PG `pg_dump --single-transaction` / MySQL `mysqldump --single-transaction --master-data=2`，命令经 cmd_runner 注入（本机无客户端时用桩，真实部署接真命令）。
+- 转储校验：非空 + schema/data/binlog_pos 标记齐全，坏转储绝不覆盖现库。
+- **复制延迟闸门** `lag_gate()`：把原来的 `--allow-stale` 人工闸门变成"延迟 ≤ 30s 自动放行、超阈暂缓追平"，这是"用户啥都不做"的关键一环。
+- **PITR 目录**：时间点快照清单 / 保留策略 / 按恢复点选最近快照。
+- 应用+健康检查+失败回滚编排 `promote_with_rollback()`。
+
+### 缺口 3 —— 引擎去单点 `keep/quorum.py`（7 测试）
+- **多地投票** `vote()`：按权重判死、跨地域法定人数（防同机房误判）、连续轮次确认（防抖动）、冷却抑制 flapping、多数恢复健康漂移自愈。
+- **控制面双副本 lease** `Lease`：带 fencing token(epoch) 的租约争主，过期接管、旧主被 fencing 拒绝操作 DNS——解决"备机挂了没人切"且杜绝脑裂双写。
+- 过程中修 1 个真 bug：`VoteState.last_switch_ts` 默认 0 导致时钟从大值起步时误判进冷却期，改 `-inf`。
+
+### 商业化前置
+- `keep/checkout.py`（6 测试）：Creem 主 / Dodo 备双通道适配层，三档定价唯一真相源 + $99 接入费；结算 URL 生成，product id 走环境变量、缺失用占位（不建单/不碰钱/不存凭证）。
+- CLI `keep.py` 升 0.3.0-p4，新增 `db` / `quorum` / `checkout` 三个傻瓜化子命令，端到端演练通过。
+- 发布物料：`site/launch/SHOW-HN.md`（Show HN 长文）、`site/launch/PRODUCT-HUNT.md`（PH tagline/短描述/首发评论/物料清单）——我全权拍板，**未实际发帖**（对外可见动作留待用户点发的那一刻）。
+- 站点 `guard.7zi.com` 新增 Keep 全栈定价区块（Seed/Guard/Fortress + $99 接入费），与开源 DNS 线分层不打架；已通过 SFTP 部署，本地==远端哈希一致。
+
+### 全量回归
+**6 套 42/42 全绿**：test_guardup 6 + test_keep 9 + test_app 7 + test_db 7 + test_quorum 7 + test_checkout 6。
+
+---
+
+*P1 完成于 2026-11-22，P2/P3/P4 完成于 2026-11-23。代码、测试、站点、政策页、GitHub 推送、DNS 部署、Keep 全栈核心（文件+SQLite/PG/MySQL 数据库+动态应用接管+DNS+多地投票+去单点）、收款适配层、发布物料全部落地并验证。唯一需用户本人的环节：收款平台 KYC 身份认证 + 实际点击发布（证件/银行卡不进对话）。*
