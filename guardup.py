@@ -310,6 +310,54 @@ def cmd_drill() -> None:
     print("演练结束，DNS 未被修改。")
 
 
+def cmd_dns(args) -> None:
+    """DNS 记录运维：list 查看 / ensure 幂等确保记录存在（默认 dry-run）。
+
+    这是「记录管理」入口 —— 故障切换只管已有记录的 A 值，但日常运维常常是
+    「某条子域压根没建」，切换引擎帮不上。ensure 幂等：已一致则不动，
+    不存在则创建，存在但值不同则修改。凭据走环境变量，不回显。
+    """
+    inject_credentials()
+    p = get_provider(args.provider)
+    zone = args.zone
+
+    if args.action == "list":
+        client = getattr(p, "client", p)
+        if not hasattr(client, "list_records"):
+            raise SystemExit("该 provider 不支持 list_records")
+        recs = client.list_records(zone)
+        print("%-20s %-6s %-34s %-8s %s" %
+              ("NAME", "TYPE", "VALUE", "LINE", "TTL"))
+        for r in sorted(recs, key=lambda x: (str(x.get("Name")), str(x.get("Type")))):
+            print("%-20s %-6s %-34s %-8s %s" %
+                  (r.get("Name"), r.get("Type"), r.get("Value"),
+                   r.get("Line"), r.get("TTL")))
+        print("-- %d records" % len(recs))
+        return
+
+    # ensure：先查现值，幂等
+    cur = None
+    try:
+        _rid, cur = p.find_record(zone, args.name, args.type)
+    except Exception:
+        cur = None
+
+    if cur == args.value:
+        print("OK 已存在且一致: %s.%s %s -> %s" % (args.name, zone, args.type, cur))
+        return
+    if not args.apply:
+        act = "创建" if cur is None else "修改(%s -> %s)" % (cur, args.value)
+        print("[dry-run] 计划%s: %s.%s %s = %s (ttl=%s)"
+              % (act, args.name, zone, args.type, args.value, args.ttl))
+        print("[dry-run] 加 --apply 真正写入")
+        return
+
+    old = p.set_record(zone, args.name, args.value, rec_type=args.type,
+                       ttl=args.ttl)
+    print("DONE %s.%s %s: %s -> %s" %
+          (args.name, zone, args.type, old or "(新建)", args.value))
+
+
 def cmd_daemon(interval: int = 60) -> None:
     inject_credentials()
     data = load_config()
@@ -335,6 +383,16 @@ def main() -> None:
     sub.add_parser("drill", help="演练（不真改 DNS）")
     d = sub.add_parser("daemon", help="常驻巡检")
     d.add_argument("--interval", type=int, default=60, help="巡检间隔秒数")
+    dn = sub.add_parser("dns", help="DNS 记录运维（list / ensure）")
+    dn.add_argument("action", choices=["list", "ensure"])
+    dn.add_argument("--provider", default="tencentcloud",
+                    choices=["cloudflare", "aliyun", "dnspod", "tencentcloud"])
+    dn.add_argument("--zone", required=True, help="域名，如 szspd.cn")
+    dn.add_argument("--name", default="@", help="记录名（ensure 用），如 www / @ / *")
+    dn.add_argument("--type", default="A", help="记录类型，默认 A")
+    dn.add_argument("--value", default=None, help="目标值（ensure 必填）")
+    dn.add_argument("--ttl", type=int, default=600, help="TTL（各 provider 自动夹下限）")
+    dn.add_argument("--apply", action="store_true", help="真正写入；默认 dry-run")
     args = ap.parse_args()
     inject_credentials()
     if args.cmd == "init" or args.cmd is None:
@@ -349,6 +407,8 @@ def main() -> None:
         cmd_switch(False)
     elif args.cmd == "drill":
         cmd_drill()
+    elif args.cmd == "dns":
+        cmd_dns(args)
     elif args.cmd == "daemon":
         cmd_daemon(args.interval)
 

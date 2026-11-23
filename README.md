@@ -65,6 +65,8 @@ It **auto-detects your DNS provider** by querying the authoritative nameservers 
 | `guardup restore` | Manually switch back to origin |
 | `guardup drill` | Dry-run — reads only, never modifies DNS |
 | `guardup daemon --interval 60` | Run continuous checks |
+| `guardup dns list --zone example.com` | List every record in a zone (read-only) |
+| `guardup dns ensure --zone example.com --name www --value 1.2.3.4 [--apply]` | Idempotently create/fix one record — dry-run by default |
 
 ---
 
