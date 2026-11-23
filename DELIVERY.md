@@ -100,4 +100,20 @@
 
 ---
 
-*P1 完成于 2026-11-22，P2 原型完成于 2026-11-23。代码、测试、站点、政策页、GitHub 推送、DNS 部署、Keep 原型全部落地并验证。*
+---
+
+## 八、P3：动态站接管 dogfooding（2026-11-23）
+
+用户授权自主安排测试 → 用真 Node.js 进程验证"动态站/Next.js 接管"缺口（隔离对照，不碰生产）。
+
+- **基于真实形态**：`next.config.ts` = Next.js 16 + `output:'standalone'`；`Dockerfile` = `node server.js` + `GET /api/health` 200。
+- **新增 `keep/app.py`**：产物识别 → 指纹 → 版本化同步 → 子进程启动 → 真 HTTP 健康检查 → 失败同端口回滚 → 软链切换。
+- **测试 16/16 全绿**（test_keep 9 + test_app 7）。真 node 端到端（端口 3212）：v1 启动 → v2 坏版本 500 拦截 → 同端口回滚 → 真 HTTP 200，全 PASS；进程精确清理（不误杀其他 node）。
+- **修 3 个真 bug**：① 回滚换端口导致反代仍指坏版本 → 同端口；② `os.replace` 覆盖软链 WinError 5 → 删旧建新；③ 健康判据从"进程活着"改为真 HTTP 状态码。
+- 证据固化在 `keep/DOGFOODING.md`。GitHub commit `4dfee06`。
+
+**v2 三缺口进度**：① 动态站接管 ✅ ② 数据库真副本（SQLite 档 `gate.py` 已覆盖，PG 待）③ 引擎去单点（待 P4）。
+
+---
+
+*P1 完成于 2026-11-22，P2 原型与 P3 dogfooding 完成于 2026-11-23。代码、测试、站点、政策页、GitHub 推送、DNS 部署、Keep 原型、动态站接管全部落地并验证。*
