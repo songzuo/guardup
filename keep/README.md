@@ -4,12 +4,14 @@
 > stays a DNS failover tool; **Keep** is the paid full-stack line: file + database
 > + application takeover + DNS, driven by declarative profiles and zero guessing.
 
-**Status: P4 — all three automation gaps closed.** Core logic is real and
-tested (42/42 across 6 suites). The three gaps from the v2 plan are now covered:
+**Status: P4 + self-system upgrade.** Core logic is real and tested
+(60/60 across 8 suites). The three gaps from the v2 plan are covered:
 dynamic-app takeover (`app.py`), real DB replica (`db.py`), and de-singled
 control plane with multi-region voting (`quorum.py`). Plus a payment adapter
-(`checkout.py`). The cross-host transport layer is still the one piece wired at
-deploy time. See `FULL-STACK-PLAN-v2.md` for the roadmap.
+(`checkout.py`). `bidir.py` adds failback (two-way sync), and `db_live_sync.py`
+flows the DB-replica capability back into our own battle-tested failover system
+whose `SYNC_DB` was never enabled. See `FULL-STACK-PLAN-v2.md` and
+`../SELF-SYSTEM-ASSESSMENT.md`.
 
 ## Why this exists
 
@@ -38,6 +40,8 @@ modules.
 | `discover.py` | Auto-discover nginx docroots + SQLite DB paths; server-level roots only, ACME excluded | `discover_roots.py` |
 | `gate.py` | Consistent snapshot → verify → logical-change check → swap → healthcheck → auto-rollback | `sync_apigw.sh` |
 | `watch.py` | Golden-snapshot content guard against degradation | `guard_mainlander.sh` |
+| `bidir.py` | Failback: 3-way merge + change tracking + cross-host bridge | new |
+| `db_live_sync.py` | **Upgrade for our own system**: consistent DB snapshot + verify + PITR + restore drill; dry-run by default | flows `db.py` back to `sync.sh` |
 | `app.py` | Next.js/dynamic-site takeover: artifact sync → versioned swap → real HTTP healthcheck → same-port rollback | new |
 | `db.py` | PG/MySQL real replica: consistent dump → verify → **replication-lag gate** → PITR catalog → apply/rollback | `--allow-stale` gate |
 | `quorum.py` | De-single-point: multi-region vote (quorum/anti-flap/drift-repair) + dual control-plane lease with fencing | new |
@@ -88,11 +92,13 @@ python tests/test_db.py         # 7  PG/MySQL replica + lag gate + PITR
 python tests/test_quorum.py     # 7  multi-region vote + lease fencing
 python tests/test_checkout.py   # 6  payment adapter
 python tests/test_bidir.py      # 9  bidirectional failback (real triggers)
+python tests/test_db_live_sync.py # 9 self-system DB upgrade (backup API + drill)
 # plus ../tests/test_guardup.py # 6  open-source DNS engine
 ```
 
-Real SQLite in WAL mode, real backup API, deliberately corrupted DB, forced
-healthcheck failure — no mocked core logic. **51/51 passing** across 7 suites.
+Real SQLite in WAL mode, real backup API (incl. under concurrent writes),
+deliberately corrupted DB, forced healthcheck failure, real restore drill —
+no mocked core logic. **60/60 passing** across 8 suites.
 
 ## Boundaries (deliberate)
 
